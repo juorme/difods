@@ -36,7 +36,7 @@ conn = pyodbc.connect(DRIVER = '{ODBC Driver 17 for SQL Server}',
                       DATABASE = 'db_sifods',
                       UID = 'ussifods',
                       PWD = 'sifods')
-
+# Tabla de los notas en los cursos de acompañatic
 query1 = """SELECT act.CANAL,act.CAMPUS,act.CURID,act.FULLNAME,act.IDNUMBER,act.NOMBRE_ACTIVIDAD,act.FECHA_REALIZADA,act.FINALGRADE
                 FROM [acfm].[sistema.mooc_carga_actividad] act
                 LEFT JOIN (SELECT CURID,IDNUMBER,FORMAT(FECHA_CULMINARON,'yyyy-MM-dd') AS FECHA1 FROM [acfm].[vw_sistema.mooc_carga_cumplimiento_pap]) cur on act.IDNUMBER =cur.IDNUMBER and act.CURID=cur.CURID and FORMAT(act.FECHA_REALIZADA,'yyyy-MM-dd')=cur.FECHA1
@@ -54,16 +54,18 @@ docentes = pd.read_sql_query(query2,conn)
 print("Data Set inicial de cumplimiento : " + str(df.shape))
 print("Data Set inicial de caracterizacion de docentes" + str(docentes.shape))
 
+#Cerrar la conexión a la base de datos db_sifods
+conn.close()
 
-#Procesamiento de datos 
-#Transformación de caracteres en el dni 
+###### Procesamiento de datos 
+
+# Transformación de caracteres en el dni 
 df['IDNUMBER']=pd.to_numeric(df['IDNUMBER'], errors='coerce') 
 
-#Elimina los valores nulos 
+# Elimina los valores nulos 
 df.dropna(subset=['IDNUMBER'], inplace=True)
 
-
-
+ 
 tdf = df.loc[:,['CURID','IDNUMBER','NOMBRE_ACTIVIDAD','FINALGRADE']]
 tdf_pivot = pd.pivot_table(tdf,index=['CURID','IDNUMBER'],columns='NOMBRE_ACTIVIDAD', values='FINALGRADE').reset_index()
 
@@ -100,21 +102,21 @@ dataf_1.head(3)
 
 
 ## 04 Mineria de datos 
-# función para buscar el optimó numero de codo
-# def grafico_codo(data_scaled):
-#   range_n_clusters = range(1, 11)
-#   inertias = []
+#función para buscar el optimó numero de codo
+def grafico_codo(data_scaled):
+  range_n_clusters = range(1, 11)
+  inertias = []
 
-#   for n_clusters in range_n_clusters:
-#       modelo_kmeans = KMeans(n_clusters = n_clusters, n_init = 20, random_state = 123)
-#       modelo_kmeans.fit(X=data_scaled)
-#       inertias.append(modelo_kmeans.inertia_)
+  for n_clusters in range_n_clusters:
+      modelo_kmeans = KMeans(n_clusters = n_clusters, n_init = 20, random_state = 123)
+      modelo_kmeans.fit(X=data_scaled)
+      inertias.append(modelo_kmeans.inertia_)
 
-#   fig, ax = plt.subplots(1, 1)
-#   ax.plot(range_n_clusters, inertias, marker='o')
-#   ax.set_title("Número Óptimo de Cluster")
-#   ax.set_xlabel('Número clusters')
-#   plt.show()
+  fig, ax = plt.subplots(1, 1)
+  ax.plot(range_n_clusters, inertias, marker='o')
+  ax.set_title("Número Óptimo de Cluster")
+  ax.set_xlabel('Número clusters')
+  plt.show()
 
 # # función para prueba de normalidad
 # def prueba_normalidad(datos, data_scaled):
@@ -214,12 +216,13 @@ data_norm = StandardScaler().fit_transform(dataf_1.loc[:,variables].drop('IDNUMB
 predicted_clusters_kmeans = KMeans(n_clusters=4, random_state=1).fit_predict(X=data_norm)
 
 # indicaores de davies_boulding y solhoute 
-davies_bouldin_score_kmeans = davies_bouldin_score(data_norm, predicted_clusters_kmeans)
-silhouette_score_kmeans = silhouette_score(data_norm, predicted_clusters_kmeans)
-result_comp_clusters = pd.DataFrame(index=['Índice de Davies-Bouldin', 'Índice de Silhouette'])
-result_comp_clusters['K-means'] = [davies_bouldin_score_kmeans, silhouette_score_kmeans]
+# davies_bouldin_score_kmeans = davies_bouldin_score(data_norm, predicted_clusters_kmeans)
+# silhouette_score_kmeans = silhouette_score(data_norm, predicted_clusters_kmeans)
+# result_comp_clusters = pd.DataFrame(index=['Índice de Davies-Bouldin', 'Índice de Silhouette'])
+# result_comp_clusters['K-means'] = [davies_bouldin_score_kmeans, silhouette_score_kmeans]
+# print(result_comp_clusters)
 
-# Agregar la columna de agrupacín (clusteres)
+# Agregar la columna de agrupacion (clusteres)
 data_fin =dataf_1.loc[:,var_2]
 data_fin['clusters'] = predicted_clusters_kmeans + 1
 
@@ -235,13 +238,77 @@ conn3 = pyodbc.connect(DRIVER = '{ODBC Driver 17 for SQL Server}',
 
 cursor = conn3.cursor()
 
+cursor.execute("TRUNCATE TABLE ml.cluster_2022")
+conn3.commit()
+
+
 sql_insert = """INSERT INTO [EG_BD].ml.cluster_2022 (IDNUMBER,CURID,CUEST_ENTRADA,CUEST_SALIDA,CLUSTER) VALUES (?,?,?,?,?)"""
 val = data_fin[['IDNUMBER','CURID','Cuestionario de entrada','Cuestionario de salida','clusters']].values.tolist()
-
 
 cursor.executemany(sql_insert,val)
 conn3.commit()
 
+# #Alternativa para cargar datos 
+# data_fin.to_csv("D:/difods/py001_paptic/data/cluster_2022.csv",sep=";", index=False, header=False)
+# cursor.execute("BULK INSERT [EG_BD].ml.cluster_2022 FROM 'D://difods//py001_paptic//data//cluster_2022.csv' WITH (FIELDTERMINATOR = ';', ROWTERMINATOR= '\\n', CODEPAGE = '65001')")
+# conn3.commit()
+
+data_fin.to_sql(name='ml.cluster_2022', con=conn3,if_exists='append', index=False)
+
+#Cerrar las conexiones
+cursor.close()
+conn3.close()
+
+####################################
+tdf_pivot.head()
+q1=tdf_pivot
+
+q1.head()
+
+variables_2 = ['Cuestionario de entrada','Cuestionario de salida']
+
+# grafico_codo(q1.loc[:,variables_2])
+
+# Reescalar las variables categoricas a numericas 
+data_norm = StandardScaler().fit_transform(q1.loc[:,variables_2])
 
 
+# los resultados del modelo se guardan en labels_ dentro del modelo mod_clus01
+predicted_clusters_kmeans = KMeans(n_clusters=3, random_state=1).fit_predict(X=data_norm)
 
+# indicaores de davies_boulding y solhoute 
+# davies_bouldin_score_kmeans = davies_bouldin_score(data_norm, predicted_clusters_kmeans)
+# silhouette_score_kmeans = silhouette_score(data_norm, predicted_clusters_kmeans)
+# result_comp_clusters = pd.DataFrame(index=['Índice de Davies-Bouldin', 'Índice de Silhouette'])
+# result_comp_clusters['K-means'] = [davies_bouldin_score_kmeans, silhouette_score_kmeans]
+# print(result_comp_clusters)
+
+# Agregar la columna de agrupacion (clusteres)
+
+q1['clusters'] = predicted_clusters_kmeans + 1
+
+q1.head(5)
+
+
+# Insertar los datos 
+conn3 = pyodbc.connect(DRIVER = '{ODBC Driver 17 for SQL Server}',
+                      SERVER = 'med000008646',
+                      DATABASE = 'EG_BD',
+                      UID = 'ussifods',
+                      PWD = 'sifods')
+
+cursor = conn3.cursor()
+
+cursor.execute("TRUNCATE TABLE ml.cluster_2022")
+conn3.commit()
+
+
+sql_insert = """INSERT INTO [EG_BD].ml.cluster_2022 VALUES (?,?,?,?,?)"""
+val = q1[['IDNUMBER','CURID','Cuestionario de entrada','Cuestionario de salida','clusters']].values.tolist()
+
+cursor.executemany(sql_insert,val)
+conn3.commit()
+
+#Cerrar las conexiones
+cursor.close()
+conn3.close()
