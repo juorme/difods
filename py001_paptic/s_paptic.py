@@ -57,6 +57,7 @@ print("Data Set inicial de caracterizacion de docentes" + str(docentes.shape))
 #Cerrar la conexión a la base de datos db_sifods
 conn.close()
 
+
 ###### Procesamiento de datos 
 
 # Transformación de caracteres en el dni 
@@ -65,7 +66,6 @@ df['IDNUMBER']=pd.to_numeric(df['IDNUMBER'], errors='coerce')
 # Elimina los valores nulos 
 df.dropna(subset=['IDNUMBER'], inplace=True)
 
- 
 tdf = df.loc[:,['CURID','IDNUMBER','NOMBRE_ACTIVIDAD','FINALGRADE']]
 tdf_pivot = pd.pivot_table(tdf,index=['CURID','IDNUMBER'],columns='NOMBRE_ACTIVIDAD', values='FINALGRADE').reset_index()
 
@@ -73,7 +73,6 @@ tdf_pivot = pd.pivot_table(tdf,index=['CURID','IDNUMBER'],columns='NOMBRE_ACTIVI
 tdf_pivot["Cuestionario de entrada"] = tdf_pivot["Cuestionario de entrada"].fillna(0)
 tdf_pivot["Cuestionario de salida"] = tdf_pivot["Cuestionario de salida"].fillna(0)
 tdf_pivot.isnull().sum()
-
 
 docentes['DNI']=pd.to_numeric(docentes['DNI'], errors='coerce')
 dataf_1 = tdf_pivot.merge(docentes , how='left', left_on='IDNUMBER', right_on='DNI' )
@@ -88,9 +87,7 @@ dataf_1.isnull().sum()
 #reemplazar los valores null
 dataf_1=dataf_1.dropna()
 dataf_1['ESCALA_DIFODS']=dataf_1['ESCALA_DIFODS'].fillna(0)
-
-
-print(dataf_1["NIVEL_NEXUS"].value_counts())
+ # print(dataf_1["NIVEL_NEXUS"].value_counts())
 
 
 # Reclasificando variables
@@ -118,57 +115,6 @@ def grafico_codo(data_scaled):
   ax.set_xlabel('Número clusters')
   plt.show()
 
-# # función para prueba de normalidad
-# def prueba_normalidad(datos, data_scaled):
-
-#   df_swt = pd.DataFrame(index=['Estadístico de la prueba', 'p-value'])
-
-#   for i, k in enumerate(datos.keys()):
-#     (swt, swp) = stats.normaltest(data_scaled[:,i])
-#     df_swt[k] = [float("{:.4f}".format(swt)), float("{:.4f}".format(swp))]
-    
-#   return(df_swt)
-
-#Función grafico de cluster dos variables
-# def grafico_cluster_principal(datos, c1, c2):
-#   y = datos['clusters']
-#   plt.figure(figsize=(15, 15))
-#   fig, ax = plt.subplots()
-#   sc = ax.scatter(datos[c1], datos[c2],c=y)
-#   ax.legend(*sc.legend_elements(), title='Grupos')
-#   plt.xlabel(c1,size=14)
-#   plt.ylabel(c2,size=14)
-#   #plt.axis("equal")
-#   plt.title('Clusterización K-means(k=4)', size=18)
-#   plt.show()
-
-# Función grafico de cluster tres variables
-# def grafico_cluster_3d(datos,x,y,z):
-#     y1 = datos['clusters']
-#     fig = plt.figure(figsize=(10,8))
-#     ax = fig.add_subplot(111,projection='3d')
-#     ax.view_init(15, 40)
-#     plt.xlabel(x,size= 14)
-#     plt.ylabel(y,size= 14)
-#     plt.title("Clusterización K-means(k=4)",size= 20)
-#     sc = ax.scatter(datos[x],datos[y],datos[z],c=y1)
-#     ax.legend(*sc.legend_elements(), title='Grupos')
-#     plt.show()
-
-# Funcion para calcular prueba de kruskall_wallis , prueba de diferencia de grupos
-# def kruskal_wallis(datos):
-#   df_kwt = pd.DataFrame(index=['Estadístico de la prueba', 'p-value'])
-#   var1 = ['NIVEL_NEXUS','EDAD','ESCALA_DIFODS','DAREACENSO','Cuestionario de entrada','Cuestionario de salida']
-#   for c in var1:
-#     datos_grupo1_temp  = datos.loc[datos['clusters']==1][c].values
-#     datos_grupo2_temp  = datos.loc[datos['clusters']==2][c].values
-#     datos_grupo3_temp  = datos.loc[datos['clusters']==3][c].values
-#     datos_grupo4_temp  = datos.loc[datos['clusters']==4][c].values
-
-#     (stkw, pvkw) = stats.kruskal(datos_grupo1_temp, datos_grupo2_temp, datos_grupo3_temp, datos_grupo4_temp)
-
-#     df_kwt[c] = [float("{:.4f}".format(stkw)), float("{:.4f}".format(pvkw))]
-#   return(df_kwt)
 
 # funcion para comparar el numero de cluster
 def comparar_clusters(data_scaled):
@@ -177,101 +123,84 @@ def comparar_clusters(data_scaled):
     davies_bouldin_score_kmeans = davies_bouldin_score(data_scaled, predicted_clusters_kmeans)
     silhouette_score_kmeans = silhouette_score(data_scaled, predicted_clusters_kmeans)
 
-#     predicted_clusters_miniba = MiniBatchKMeans(n_clusters=i, random_state=2).fit_predict(X=data_scaled)
-#     davies_bouldin_score_miniba = davies_bouldin_score(data_scaled, predicted_clusters_miniba)
-#     silhouette_score_miniba = silhouette_score(data_scaled, predicted_clusters_miniba)
-
     result_comp_clusters = pd.DataFrame(index=['Índice de Davies-Bouldin', 'Índice de Silhouette'])
     result_comp_clusters['K-means'] = [davies_bouldin_score_kmeans, silhouette_score_kmeans]
-#     result_comp_clusters['MiniBatchKM'] = [davies_bouldin_score_miniba, silhouette_score_miniba]
     return(result_comp_clusters)
 
-def analisis_resultados(datosini,data_norm):
-    var2 = ['NIVEL_NEXUS','EDAD','ESCALA_DIFODS','DAREACENSO','Cuestionario de entrada','Cuestionario de salida']
-    # los resultados del modelo se guardan en labels_ dentro del modelo mod_clus01
-    predicted_clusters_kmeans = KMeans(n_clusters=4, random_state=1).fit_predict(X=data_norm)
-    datosini['clusters'] = predicted_clusters_kmeans + 1
-    gr1 = datosini.groupby('clusters').agg(N = ("clusters", 'count'))
-    #gr2 = gr1.groupby(level=0).apply(lambda x: 100 * x / float(x.sum()))
-    print(gr1)
-    #datosini['clusters'].value_counts()
-
-    # Prueba de normalidad de var2
-    #prueba_normalidad( datosini.loc[:,var2],data_norm)
-
-    # Prueba no parametrica de diferencia de grupos
-    # kruskal_wallis(datosini)
+# def analisis_resultados(datosini,data_norm):
+#     var2 = ['NIVEL_NEXUS','EDAD','ESCALA_DIFODS','DAREACENSO','Cuestionario de entrada','Cuestionario de salida']
+#     # los resultados del modelo se guardan en labels_ dentro del modelo mod_clus01
+#     predicted_clusters_kmeans = KMeans(n_clusters=4, random_state=1).fit_predict(X=data_norm)
+#     datosini['clusters'] = predicted_clusters_kmeans + 1
+#     gr1 = datosini.groupby('clusters').agg(N = ("clusters", 'count'))
+#     #gr2 = gr1.groupby(level=0).apply(lambda x: 100 * x / float(x.sum()))
+#     print(gr1)
+#     #datosini['clusters'].value_counts()
 
 
+# # Seleccion de variables y normalización 
+# variables = ['IDNUMBER','NIVEL_NEXUS','EDAD','ESCALA_DIFODS','DAREACENSO','Cuestionario de entrada','Cuestionario de salida']
+# var_2 = ['IDNUMBER','CURID','Cuestionario de entrada','Cuestionario de salida']
+
+# # Reescalar las variables categoricas a numericas 
+# data_norm = StandardScaler().fit_transform(dataf_1.loc[:,variables].drop('IDNUMBER',axis=1))
+
+# # los resultados del modelo se guardan en labels_ dentro del modelo mod_clus01
+# predicted_clusters_kmeans = KMeans(n_clusters=4, random_state=1).fit_predict(X=data_norm)
+
+# # indicaores de davies_boulding y solhoute 
+# # davies_bouldin_score_kmeans = davies_bouldin_score(data_norm, predicted_clusters_kmeans)
+# # silhouette_score_kmeans = silhouette_score(data_norm, predicted_clusters_kmeans)
+# # result_comp_clusters = pd.DataFrame(index=['Índice de Davies-Bouldin', 'Índice de Silhouette'])
+# # result_comp_clusters['K-means'] = [davies_bouldin_score_kmeans, silhouette_score_kmeans]
+# # print(result_comp_clusters)
+
+# # Agregar la columna de agrupacion (clusteres)
+# data_fin =dataf_1.loc[:,var_2]
+# data_fin['clusters'] = predicted_clusters_kmeans + 1
+
+# data_fin.head(5)
 
 
-# Seleccion de variables y normalización 
-variables = ['IDNUMBER','NIVEL_NEXUS','EDAD','ESCALA_DIFODS','DAREACENSO','Cuestionario de entrada','Cuestionario de salida']
-var_2 = ['IDNUMBER','CURID','Cuestionario de entrada','Cuestionario de salida']
+# # Insertar los datos 
+# conn3 = pyodbc.connect(DRIVER = '{ODBC Driver 17 for SQL Server}',
+#                       SERVER = 'med000008646',
+#                       DATABASE = 'EG_BD',
+#                       UID = 'ussifods',
+#                       PWD = 'sifods')
 
-# Reescalar las variables categoricas a numericas 
-data_norm = StandardScaler().fit_transform(dataf_1.loc[:,variables].drop('IDNUMBER',axis=1))
+# cursor = conn3.cursor()
 
-# los resultados del modelo se guardan en labels_ dentro del modelo mod_clus01
-predicted_clusters_kmeans = KMeans(n_clusters=4, random_state=1).fit_predict(X=data_norm)
-
-# indicaores de davies_boulding y solhoute 
-# davies_bouldin_score_kmeans = davies_bouldin_score(data_norm, predicted_clusters_kmeans)
-# silhouette_score_kmeans = silhouette_score(data_norm, predicted_clusters_kmeans)
-# result_comp_clusters = pd.DataFrame(index=['Índice de Davies-Bouldin', 'Índice de Silhouette'])
-# result_comp_clusters['K-means'] = [davies_bouldin_score_kmeans, silhouette_score_kmeans]
-# print(result_comp_clusters)
-
-# Agregar la columna de agrupacion (clusteres)
-data_fin =dataf_1.loc[:,var_2]
-data_fin['clusters'] = predicted_clusters_kmeans + 1
-
-data_fin.head(5)
-
-
-# Insertar los datos 
-conn3 = pyodbc.connect(DRIVER = '{ODBC Driver 17 for SQL Server}',
-                      SERVER = 'med000008646',
-                      DATABASE = 'EG_BD',
-                      UID = 'ussifods',
-                      PWD = 'sifods')
-
-cursor = conn3.cursor()
-
-cursor.execute("TRUNCATE TABLE ml.cluster_2022")
-conn3.commit()
-
-
-sql_insert = """INSERT INTO [EG_BD].ml.cluster_2022 (IDNUMBER,CURID,CUEST_ENTRADA,CUEST_SALIDA,CLUSTER) VALUES (?,?,?,?,?)"""
-val = data_fin[['IDNUMBER','CURID','Cuestionario de entrada','Cuestionario de salida','clusters']].values.tolist()
-
-cursor.executemany(sql_insert,val)
-conn3.commit()
-
-# #Alternativa para cargar datos 
-# data_fin.to_csv("D:/difods/py001_paptic/data/cluster_2022.csv",sep=";", index=False, header=False)
-# cursor.execute("BULK INSERT [EG_BD].ml.cluster_2022 FROM 'D://difods//py001_paptic//data//cluster_2022.csv' WITH (FIELDTERMINATOR = ';', ROWTERMINATOR= '\\n', CODEPAGE = '65001')")
+# cursor.execute("TRUNCATE TABLE ml.cluster_2022")
 # conn3.commit()
 
-data_fin.to_sql(name='ml.cluster_2022', con=conn3,if_exists='append', index=False)
+# sql_insert = """INSERT INTO [EG_BD].ml.cluster_2022 (IDNUMBER,CURID,CUEST_ENTRADA,CUEST_SALIDA,CLUSTER) VALUES (?,?,?,?,?)"""
+# val = data_fin[['IDNUMBER','CURID','Cuestionario de entrada','Cuestionario de salida','clusters']].values.tolist()
 
-#Cerrar las conexiones
-cursor.close()
-conn3.close()
+# cursor.executemany(sql_insert,val)
+# conn3.commit()
 
-####################################
+# # #Alternativa para cargar datos 
+# # data_fin.to_csv("D:/difods/py001_paptic/data/cluster_2022.csv",sep=";", index=False, header=False)
+# # cursor.execute("BULK INSERT [EG_BD].ml.cluster_2022 FROM 'D://difods//py001_paptic//data//cluster_2022.csv' WITH (FIELDTERMINATOR = ';', ROWTERMINATOR= '\\n', CODEPAGE = '65001')")
+# # conn3.commit()
+
+# #Cerrar las conexiones
+# cursor.close()
+# conn3.close()
+
+
+########################################
 tdf_pivot.head()
 q1=tdf_pivot
-
 q1.head()
-
+# seleccion de variables
 variables_2 = ['Cuestionario de entrada','Cuestionario de salida']
 
 # grafico_codo(q1.loc[:,variables_2])
 
 # Reescalar las variables categoricas a numericas 
 data_norm = StandardScaler().fit_transform(q1.loc[:,variables_2])
-
 
 # los resultados del modelo se guardan en labels_ dentro del modelo mod_clus01
 predicted_clusters_kmeans = KMeans(n_clusters=3, random_state=1).fit_predict(X=data_norm)
@@ -284,7 +213,6 @@ predicted_clusters_kmeans = KMeans(n_clusters=3, random_state=1).fit_predict(X=d
 # print(result_comp_clusters)
 
 # Agregar la columna de agrupacion (clusteres)
-
 q1['clusters'] = predicted_clusters_kmeans + 1
 
 q1.head(5)
@@ -298,17 +226,15 @@ conn3 = pyodbc.connect(DRIVER = '{ODBC Driver 17 for SQL Server}',
                       PWD = 'sifods')
 
 cursor = conn3.cursor()
-
+#Borrar los datos de la tabla ml.cluster_2022
 cursor.execute("TRUNCATE TABLE ml.cluster_2022")
 conn3.commit()
 
-
+#Insertar valores 
 sql_insert = """INSERT INTO [EG_BD].ml.cluster_2022 VALUES (?,?,?,?,?)"""
 val = q1[['IDNUMBER','CURID','Cuestionario de entrada','Cuestionario de salida','clusters']].values.tolist()
-
 cursor.executemany(sql_insert,val)
 conn3.commit()
-
 #Cerrar las conexiones
 cursor.close()
 conn3.close()
