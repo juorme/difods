@@ -119,7 +119,7 @@ q1=tdf_pivot
 variables_2 = ['Cuestionario de entrada','Cuestionario de salida']
 
 #Crear grafico 
-grafico_codo(q1.loc[:,variables_2])
+#grafico_codo(q1.loc[:,variables_2])
 
 # Reescalar las variables categoricas a numericas 
 data_norm = StandardScaler().fit_transform(q1.loc[:,variables_2])
