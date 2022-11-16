@@ -125,7 +125,7 @@ variables_2 = ['Cuestionario de entrada','Cuestionario de salida']
 data_norm = StandardScaler().fit_transform(q1.loc[:,variables_2])
 
 # los resultados del modelo se guardan en labels_ dentro del modelo mod_clus01
-predicted_clusters_kmeans = KMeans(n_clusters=4, random_state=1).fit_predict(X=data_norm)
+predicted_clusters_kmeans = KMeans(n_clusters=3, random_state=1).fit_predict(X=data_norm)
 
 # indicadores de validacion davies_boulding y solhoute 
 davies_bouldin_score_kmeans = davies_bouldin_score(data_norm, predicted_clusters_kmeans)
@@ -166,9 +166,3 @@ conn3.close()
 
 #Final
 print("Ejecución exitosa: \n" + "Se cargaron " + str(q1.shape[0]) + " filas en la tabla")
-
-
-
-
-
-
