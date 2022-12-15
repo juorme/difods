@@ -86,8 +86,8 @@ count_celdas_ocupadas = df_pivot.notnull().sum()
 # Ordenar el resultado de mayot a menor
 sorted_count_celdas_ocupadas = count_celdas_ocupadas.sort_values()
 # Plot Histograma
-sorted_count_celdas_ocupadas.hist()
-plt.show()
+#sorted_count_celdas_ocupadas.hist()
+#plt.show()
 
 # Descomposicion de valores singulares 
 # Obtener la valoración media de cada usuario
